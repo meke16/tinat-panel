@@ -24,6 +24,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Google\Service\Slides\Placeholder;
 
 class VideosResource extends Resource
 {
@@ -79,7 +80,6 @@ class VideosResource extends Resource
                                 : null;
 
                             $set('url', $embed ?? $state);
-                            $set('type', 'Video');
                         }
                     } catch (\Exception $e) {
                         // clear fields on error
@@ -90,19 +90,22 @@ class VideosResource extends Resource
                         $set('url', '');
                     }
                 })
-
+                ->placeholder('Enter YouTube video URL')
                 ->required()
                 ->columnSpanFull(),
 
             TextInput::make('title')
+                ->placeholder('Video Title')
                 ->label('Title')
                 ->required(),
 
             TextInput::make('author')
-
+                ->placeholder('Video Author')
                 ->label('Author'),
 
             TextInput::make('type')
+                ->default('Video')
+                ->placeholder('e.g., Video, Tutorial')
                 ->label('Type'),
 
             TextInput::make('duration')
@@ -110,9 +113,11 @@ class VideosResource extends Resource
                 ->placeholder('e.g., 5:30 for 5 minutes 30 seconds'),
 
             TextInput::make('size')
+                ->placeholder('e.g., 50MB, 1.5GB')
                 ->label('Size (optional)'),
 
             Textarea::make('description')
+                ->placeholder('Video Description')
                 ->label('Description')
                 ->columnSpanFull(),
         ]);
@@ -232,6 +237,6 @@ class VideosResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 1;
+        return 7;
     }
 }

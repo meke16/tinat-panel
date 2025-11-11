@@ -17,5 +17,8 @@ class Chapter extends Model
     public function subchapters() {
         return $this->hasMany(Subchapter::class);
     }
+    public function materials() {
+        return $this->hasMany(Material::class);
+    }
 }
 
