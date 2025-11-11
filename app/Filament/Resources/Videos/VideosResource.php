@@ -64,12 +64,22 @@ class VideosResource extends Resource
                         $info = $service->getVideoInfo($state);
 
                         if ($info) {
-                            $set('title', $info['title']);
-                            $set('author', $info['author']);
-                            $set('description', $info['description']);
+                            $set('title', $info['title'] ?? '');
+                            $set('author', $info['author'] ?? '');
+                            $set('description', $info['description'] ?? '');
 
                             // Convert seconds to minutes
                             $set('duration', round($info['duration'] / 60, 2));
+
+                            preg_match('/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]+)/', $state, $matches);
+                            $videoId = $matches[1] ?? null;
+
+                            $embed = $videoId
+                                ? '<iframe width="560" height="315" src="https://www.youtube.com/embed/' . $videoId . '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>'
+                                : null;
+
+                            $set('url', $embed ?? $state);
+                            $set('type', 'Video');
                         }
                     } catch (\Exception $e) {
                         // clear fields on error
@@ -77,6 +87,7 @@ class VideosResource extends Resource
                         $set('author', '');
                         $set('description', '');
                         $set('duration', '');
+                        $set('url', '');
                     }
                 })
 
