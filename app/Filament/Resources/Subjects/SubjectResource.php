@@ -6,6 +6,7 @@ use App\Filament\Resources\Subjects\Pages\ManageSubjects;
 use App\Models\Subject;
 use App\Models\Grade;
 use App\Enums\SubjectEnum;
+use Doctrine\DBAL\Schema\View;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Select;
@@ -18,9 +19,13 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Builder;
+use Filament\Forms\Components\TextInput;
 use Illuminate\Validation\Rules\Unique;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Summarizers\Sum;
+use Filament\Tables\Filters\SelectFilter;
 
 class SubjectResource extends Resource
 {
@@ -37,7 +42,7 @@ class SubjectResource extends Resource
                     ->label('Grade')
                     ->required()
                     ->relationship('grade', 'name')
-                    ->getOptionLabelFromRecordUsing(fn (Grade $record) => $record->name)
+                    ->getOptionLabelFromRecordUsing(fn(Grade $record) => $record->name)
                     ->searchable()
                     ->preload(),
 
@@ -46,6 +51,7 @@ class SubjectResource extends Resource
                     ->label('Subject')
                     ->required()
                     ->options(SubjectEnum::asSelectArray())
+                    ->searchable()
                     ->unique(
                         ignoreRecord: true,
                         modifyRuleUsing: function (Unique $rule, $get) {
@@ -55,12 +61,26 @@ class SubjectResource extends Resource
             ]);
     }
 
+
     public static function table(Table $table): Table
     {
         return $table
+            //defaul pagination
+            ->defaultPaginationPageOption(25)
+            ->modifyQueryUsing(
+                fn($query) =>
+                $query->orderBy(
+                    Grade::select('order')
+                        ->whereColumn('grades.id', 'subjects.grade_id')
+                )
+            )
             ->columns([
-                // Grade badge
-                BadgeColumn::make('grade.name')
+                BadgeColumn::make('name')
+                    ->label('Subject')
+                    ->colors(['info'])
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('grade.name')
                     ->label('Grade')
                     ->colors([
                         'primary' => 'Grade 9',
@@ -72,26 +92,32 @@ class SubjectResource extends Resource
                     ->sortable()
                     ->searchable(),
 
-                // Subject name
-                TextColumn::make('name')
-                   ->searchable()
-                   ->sortable()
-                   ->label('Subject'),
-               
+
                 TextColumn::make('created_at')
                     ->since()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->colors(['info'])
+                    ->toggleable(isToggledHiddenByDefault: false),
+
                 TextColumn::make('updated_at')
                     ->since()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->colors(['info'])
+                    ->toggleable(isToggledHiddenByDefault: false),
             ])
             ->defaultGroup('grade.name')
+            ->filters([
+                SelectFilter::make('grade')
+                    ->relationship('grade', 'name'),
+                SelectFilter::make('name')
+                    ->options(SubjectEnum::asSelectArray()),
+            ])
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make(),
                     DeleteAction::make(),
+                    ViewAction::make(),
+
                 ]),
             ])
             ->toolbarActions([
@@ -101,20 +127,21 @@ class SubjectResource extends Resource
             ]);
     }
 
+
     public static function getPages(): array
     {
         return [
             'index' => ManageSubjects::route('/'),
         ];
     }
-            public static function getNavigationGroup(): ?string
+    public static function getNavigationGroup(): ?string
     {
-        return 'Manage Question';
+        return 'Manage Subjects';
     }
 
     public static function getNavigationLabel(): string
     {
-        return 'Subjects';
+        return 'Subject';
     }
 
     public static function getNavigationIcon(): string

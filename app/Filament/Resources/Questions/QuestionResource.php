@@ -9,12 +9,14 @@ use App\Models\Question;
 use App\Models\Subchapter;
 use App\Models\Subject;
 use BackedEnum;
+use Doctrine\DBAL\Schema\View;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
@@ -29,6 +31,7 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Stringable;
 
 class QuestionResource extends Resource
 {
@@ -219,9 +222,10 @@ class QuestionResource extends Resource
                     ->limit(100)
                     ->html(),
 
-                TextColumn::make('options.text')
+                BadgeColumn::make('options.text')
                     ->label('Options')
                     ->limit(100)
+                    ->colors(['warning'])
                     ->formatStateUsing(function ($state) {
                         if (is_array($state)) {
                             return collect($state)->map(fn($option) => strip_tags($option['text'] ?? ''))->implode(' | ');
@@ -229,14 +233,14 @@ class QuestionResource extends Resource
                         return strip_tags($state ?? '');
                     }),
 
-                TextColumn::make('answerIndex')
+                BadgeColumn::make('answerIndex')
                     ->label('Answer Index')
+                    ->colors(['success'])
                     ->sortable(),
 
                 TextColumn::make('tags')
                     ->label('Tags')
-                    ->limit(50)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->limit(50),
 
                 TextColumn::make('created_at')
                     ->label('Created')
@@ -330,6 +334,7 @@ class QuestionResource extends Resource
             ])
             ->recordActions([
                ActionGroup::make([
+                   ViewAction::make(),
                    EditAction::make(),
                    DeleteAction::make(),
                ])
@@ -356,16 +361,16 @@ class QuestionResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return 'Grades';
+        return 'Question';
     }
 
     public static function getNavigationIcon(): string
     {
-        return 'heroicon-o-academic-cap';
+        return 'heroicon-o-question-mark-circle';
     }
     public static function getNavigationSort(): ?int
     {
-        return 1;
+        return 5;
     }
 
 }

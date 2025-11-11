@@ -5,15 +5,19 @@ namespace App\Filament\Resources\Grades;
 use App\Filament\Resources\Grades\Pages\ManageGrades;
 use App\Models\Grade;
 use BackedEnum;
+use Doctrine\DBAL\Schema\View;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -30,6 +34,16 @@ class GradeResource extends Resource
                 TextInput::make('name')
                     ->unique()
                     ->required(),
+                Select::make('order')
+                    ->label('Grade Order')
+                    ->options([
+                        1 => 'first',
+                        2 => 'second',
+                        3 => 'third',
+                        4 => 'fourth',
+                        5 => 'Others',
+                    ])
+                    ->required(),
             ]);
     }
 
@@ -37,17 +51,38 @@ class GradeResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name')
+                BadgeColumn::make('name')
+                    ->label('Grade Name')
+                    ->sortable()
+                    ->colors([
+                        'primary' => 'Grade 9',
+                        'success' => 'Grade 10',
+                        'info' => 'Grade 11',
+                        'danger' => 'Grade 12',
+                        'secondary' => 'Others',
+                    ])
+                    ->searchable(),
+                 BadgeColumn::make('order')
+                    ->label('Grade Order')
+                    ->sortable()
+                    ->colors([
+                        'primary' => 'Grade 9',
+                        'success' => 'Grade 10',
+                        'info' => 'Grade 11',
+                        'danger' => 'Grade 12',
+                        'secondary' => 'Others',
+                    ])
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->since()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->colors(['info'])
+                    ->sortable(),
                 TextColumn::make('updated_at')
                     ->since()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
+                    ->colors(['info'])
+                    ->sortable(),
+                    ])
+            ->defaultSort('order')
             ->filters([
                 //
             ])
@@ -55,6 +90,7 @@ class GradeResource extends Resource
                 ActionGroup::make([
                     EditAction::make(),
                     DeleteAction::make(),
+                    ViewAction::make(),
                 ]),
              
             ])
@@ -73,12 +109,12 @@ class GradeResource extends Resource
     }
         public static function getNavigationGroup(): ?string
     {
-        return 'Manage Question';
+        return 'Manage Grades';
     }
 
     public static function getNavigationLabel(): string
     {
-        return 'Grades';
+        return 'Grade';
     }
 
     public static function getNavigationIcon(): string

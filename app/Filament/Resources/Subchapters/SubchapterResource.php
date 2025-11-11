@@ -8,11 +8,13 @@ use App\Models\Grade;
 use App\Models\Subchapter;
 use App\Models\Subject;
 use BackedEnum;
+use Doctrine\DBAL\Schema\View;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -28,86 +30,112 @@ class SubchapterResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    public static function form(Schema $schema): Schema
-    {
-        return $schema
-            ->components([
-                          // 1️⃣ Select Grade
-            Select::make('grade_id')
-                ->label('Grade')
-                ->relationship('chapter.subject.grade', 'name')
-                ->options(Grade::pluck('name', 'id'))
-                ->reactive()
-                ->afterStateUpdated(fn ($set) => $set('subject_id', null))
-                ->required(),
+public static function form(Schema $schema): Schema
+{
+    return $schema->components([
+        // 1️⃣ Grade
+        Select::make('grade_id')
+            ->label('Grade')
+            ->options(Grade::pluck('name', 'id'))
+            ->reactive()
+            ->afterStateHydrated(function ($set, $record) {
+                if ($record && $record->chapter?->subject?->grade_id) {
+                    $set('grade_id', $record->chapter->subject->grade_id);
+                }
+            })
+            ->afterStateUpdated(fn ($set) => $set('subject_id', null))
+            ->required(),
+            // ->disabled(fn ($record) => filled($record))  --disable when editing
 
-            // 2️⃣ Select Subject based on Grade
-            Select::make('subject_id')
-                ->label('Subject')
-                ->options(function (callable $get) {
-                    $gradeId = $get('grade_id');
-                    if (!$gradeId) return Subject::pluck('name', 'id');
+        // 2️⃣ Subject
+        Select::make('subject_id')
+            ->label('Subject')
+            ->options(function (callable $get) {
+                $gradeId = $get('grade_id');
+                if (!$gradeId) return Subject::pluck('name', 'id');
+                return Subject::where('grade_id', $gradeId)->pluck('name', 'id');
+            })
+            ->reactive()
+            ->afterStateHydrated(function ($set, $record) {
+                if ($record && $record->chapter?->subject_id) {
+                    $set('subject_id', $record->chapter->subject_id);
+                }
+            })
+            ->afterStateUpdated(fn ($set) => $set('chapter_id', null))
+            ->required(),
+            // ->disabled(fn ($record) => filled($record))    --disable when editing
 
-                    return Subject::where('grade_id', $gradeId)
-                        ->pluck('name', 'id');
-                })
-                ->reactive()
-                ->afterStateUpdated(fn ($set) => $set('chapter_id', null))
-                ->required(),
 
-            // 3️⃣ Select Chapter based on Subject
-            Select::make('chapter_id')
-                ->label('Chapter')
-                ->options(function (callable $get) {
-                    $subjectId = $get('subject_id');
-                    if (!$subjectId) return Chapter::pluck('name', 'id');
+        // 3️⃣ Chapter
+        Select::make('chapter_id')
+            ->label('Chapter')
+            ->options(function (callable $get) {
+                $subjectId = $get('subject_id');
+                if (!$subjectId) return Chapter::pluck('name', 'id');
+                return Chapter::where('subject_id', $subjectId)->pluck('name', 'id');
+            })
+            ->required(),
 
-                    return Chapter::where('subject_id', $subjectId)
-                        ->pluck('name', 'id');
-                })
-                ->required(),
+        // 4️⃣ Subchapter
+        TextInput::make('name')
+            ->label('Subchapter Name')
+            ->maxLength(255)
+            ->required(),
+    ]);
+    
+}
 
-            // 4️⃣ Subchapter Name
-            TextInput::make('name')
-                ->label('Subchapter Name')
-                ->maxLength(255)
-                ->required(),
-            ]);
-    }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultPaginationPageOption(25)
             ->columns([
-                TextColumn::make('name')
-                    ->label('Sub Chapter')
-                    ->limit(50)
-                    ->sortable()
-                    ->searchable(),
-                TextColumn::make('chapter.name')
-                    ->label('Chapter')
-                    ->limit(50)
-                    ->sortable()
-                    ->searchable(),
-                TextColumn::make('chapter.subject.name')
-                    ->label('Subject')
-                    ->limit(50)
-                    ->sortable()
-                    ->searchable(),
                 TextColumn::make('chapter.subject.grade.name')
                     ->label('Grade')
                     ->limit(50)
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->badge() // makes it a pill-style badge
+                    ->color(fn($record) => match ($record->chapter->subject->grade->name ?? null) {
+                        'Grade 9'  => 'info',
+                        'Grade 10' => 'success',
+                        'Grade 11' => 'warning',
+                        'Grade 12' => 'danger',
+                        default    => 'gray',
+                    }),
+
+                TextColumn::make('chapter.subject.name')
+                    ->label('Subject')
+                    ->limit(50)
+                    ->sortable()
+                    ->searchable()
+                    ->colors(['danger']),
+
+                TextColumn::make('chapter.name')
+                    ->label('Chapter')
+                    ->limit(50)
+                    ->sortable()
+                    ->searchable()
+                    ->colors(['success']),
+
+                TextColumn::make('name')
+                    ->label('Subchapter')
+                    ->limit(50)
+                    ->sortable()
+                    ->searchable()
+                   ->colors(['success']),
                 TextColumn::make('created_at')
                     ->label('Created At')
                     ->since()
                     ->sortable()
+                    ->colors(['warning'])
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
                     ->label('Updated At')
                     ->since()
                     ->sortable()
+                    ->colors(['warning'])
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
@@ -163,11 +191,13 @@ class SubchapterResource extends Resource
                     }),
             ])
             ->deferFilters(false)
+            ->defaultGroup('chapter.subject.grade.name')
             ->recordActions([
-               ActionGroup::make([
-                   EditAction::make(),
-                   DeleteAction::make(),
-               ]),  
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -183,14 +213,14 @@ class SubchapterResource extends Resource
         ];
     }
 
- public static function getNavigationGroup(): ?string
+    public static function getNavigationGroup(): ?string
     {
-        return 'Manage Question';
+        return 'Manage Chapters And Sub-Chapters';
     }
 
     public static function getNavigationLabel(): string
     {
-        return 'Sub Chapters';
+        return 'Sub Chapter';
     }
 
     public static function getNavigationIcon(): string

@@ -8,10 +8,12 @@ use App\Models\Subject;
 use App\Enums\SubjectEnum;
 use App\Models\Grade;
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -19,6 +21,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -28,44 +31,58 @@ class ChapterResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    public static function form(Schema $schema): Schema
-    {
-        return $schema
-            ->components([
-            // 1️⃣ Grade Selector
-            Select::make('grade_id')
-                ->label('Grade')
-                ->options(Grade::pluck('name', 'id'))
-                ->reactive()
-                ->afterStateUpdated(fn ($set) => $set('subject_id', null))
-                ->required(),
+public static function form(Schema $schema): Schema
+{
+    return $schema->components([
+        // 1️⃣ Grade Selector
+        Select::make('grade_id')
+            ->label('Grade')
+            ->options(fn() => Grade::orderBy('name')->pluck('name', 'id')->toArray())
+            ->live() // reactive in Filament v4 form system
+            ->afterStateUpdated(fn(callable $set) => $set('subject_id', null))
+            ->required(),
 
-            // 2️⃣ Subject filtered by Grade
-            Select::make('subject_id')
-                ->label('Subject')
-                ->options(function (callable $get) {
-                    $gradeId = $get('grade_id');
+        // 2️⃣ Subject filtered by selected Grade
+        Select::make('subject_id')
+            ->label('Subject')
+            ->options(function (callable $get, callable $set, ?string $state) {
+                $gradeId = $get('grade_id');
 
-                    if (!$gradeId) {
-                        return Subject::pluck('name', 'id');
+                // If we’re editing and subject_id exists but grade not yet loaded
+                // ensure it loads correctly
+                if (!$gradeId && $state) {
+                    $subject = Subject::find($state);
+                    if ($subject) {
+                        $set('grade_id', $subject->grade_id);
+                        $gradeId = $subject->grade_id;
                     }
+                }
 
-                    return Subject::where('grade_id', $gradeId)
-                        ->pluck('name', 'id');
-                })
-                ->reactive()
-                ->required()
-                ->searchable(),
+                // If grade not yet chosen, return all subjects or empty list
+                if (!$gradeId) {
+                    return [];
+                }
 
-                TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
-            ]);
-    }
+                return Subject::where('grade_id', $gradeId)
+                    ->orderBy('name')
+                    ->pluck('name', 'id')
+                    ->toArray();
+            })
+            ->searchable()
+            ->preload()
+            ->required(),
+        
+        TextInput::make('name')
+            ->required()
+            ->maxLength(255),
+    ]);
+}
 
     public static function table(Table $table): Table
     {
         return $table
+            //defaul pagination
+            ->defaultPaginationPageOption(25)
             ->columns([
                 // Grade badge
                 BadgeColumn::make('subject.grade.name')
@@ -77,47 +94,46 @@ class ChapterResource extends Resource
                         'danger' => 'Grade 12',
                         'secondary' => 'Others',
                     ])
-                    ->sortable()
+                    ->sortable()  // safe; uses Filament's automatic joins
                     ->searchable(),
 
                 // Subject badge using enum
                 BadgeColumn::make('subject.name')
                     ->label('Subject')
-                    ->color(fn (string $state): string => match ($state) {
-                        SubjectEnum::MATHEMATICS->value => 'primary',
-                        SubjectEnum::ENGLISH->value => 'info',
-                        SubjectEnum::HISTORY->value => 'warning',
-                        SubjectEnum::GEOGRAPHY->value => 'danger',
-                        SubjectEnum::PHYSICS->value => 'primary',
-                        SubjectEnum::CHEMISTRY->value => 'success',
-                        SubjectEnum::BIOLOGY->value => 'info',
-                        default => 'secondary',
-                    })
+                    ->colors(['info'])
                     ->sortable()
                     ->searchable(),
 
                 // Chapter name
                 TextColumn::make('name')
-                    ->searchable()
+                    ->label('Chapter Name')
                     ->sortable()
-                    ->label('Chapter Name'),
+                    ->colors(['success'])
+                    ->searchable(),
 
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->since()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->colors(['warning'])
+                    ->toggleable(isToggledHiddenByDefault: false),
+
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->since()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                     ->colors(['warning'])
+                    ->toggleable(isToggledHiddenByDefault: false),
             ])
-            ->defaultSort('subject.grade.name')
+
+            ->defaultGroup('subject.grade.name')
             ->filters([
-                //
+
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                    ViewAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -126,20 +142,22 @@ class ChapterResource extends Resource
             ]);
     }
 
+
+
     public static function getPages(): array
     {
         return [
             'index' => ManageChapters::route('/'),
         ];
     }
-  public static function getNavigationGroup(): ?string
+    public static function getNavigationGroup(): ?string
     {
-        return 'Manage Question';
+        return 'Manage Chapters And Sub-Chapters';
     }
 
     public static function getNavigationLabel(): string
     {
-        return 'Chapters';
+        return 'Chapter';
     }
 
     public static function getNavigationIcon(): string
