@@ -76,9 +76,10 @@
                             </svg>
                         </div>
                         {{-- add name im user model --}}
-                        {-- @php
+                         @php
                             $userName = App\Models\User::count() > 0 ? App\Models\User::first()->name : 'Admin';
-                        @endphp --}
+                            echo $userName;
+                        @endphp 
                         <h3 class="text-2xl font-bold text-white mb-4">Admin Login</h3>
                         <p class="text-blue-100 mb-6">
                             Access your admin dashboard with secure credentials to manage your application.

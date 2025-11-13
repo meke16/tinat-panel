@@ -1,23 +1,18 @@
 #!/bin/sh
 
-# Fix permissions
-chmod -R 775 storage bootstrap/cache
-chown -R www-data:www-data storage bootstrap/cache
+# Create storage link
+php artisan storage:link
 
-# Laravel optimizations
-php artisan config:clear
-php artisan cache:clear
-php artisan route:clear
-php artisan view:clear
+# Create a Filament user (update email/password as needed)
+php artisan make:filament-user --email=admin@example.com --password=Adey@1997 --name=Admin
 
+# Cache optimizations
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Filament specific
-php artisan storage:link
-php artisan filament:install --panels --force
-
-# Start services
+# Start PHP-FPM in background
 php-fpm -D
+
+# Start nginx in foreground
 nginx -g "daemon off;"
