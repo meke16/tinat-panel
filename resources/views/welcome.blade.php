@@ -75,6 +75,10 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                             </svg>
                         </div>
+                        {{-- add name im user model --}}
+                        {-- @php
+                            $userName = App\Models\User::count() > 0 ? App\Models\User::first()->name : 'Admin';
+                        @endphp --}
                         <h3 class="text-2xl font-bold text-white mb-4">Admin Login</h3>
                         <p class="text-blue-100 mb-6">
                             Access your admin dashboard with secure credentials to manage your application.
