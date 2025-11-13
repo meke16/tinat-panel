@@ -58,9 +58,23 @@ class VideosResource extends Resource
                 ->label('YouTube URL')
                 ->reactive()
                 ->afterStateUpdated(function ($state, $set) {
+
                     if (!$state) return;
 
                     try {
+                        function formatDuration(int $seconds): string
+                        {
+                            $minutes = round($seconds / 60);
+
+                            if ($minutes < 60) {
+                                return $minutes . ' min';
+                            }
+
+                            $hours = floor($minutes / 60);
+                            $remainingMinutes = $minutes % 60;
+
+                            return $hours . ':' . str_pad($remainingMinutes, 2, '0', STR_PAD_LEFT) . ' hr';
+                        }
                         $service = new \App\Services\YouTubeMetadataService();
                         $info = $service->getVideoInfo($state);
 
@@ -70,7 +84,8 @@ class VideosResource extends Resource
                             $set('description', $info['description'] ?? '');
 
                             // Convert seconds to minutes
-                            $set('duration', round($info['duration'] / 60, 2));
+                            $set('duration', formatDuration($info['duration']));
+
 
                             preg_match('/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]+)/', $state, $matches);
                             $videoId = $matches[1] ?? null;
@@ -91,8 +106,7 @@ class VideosResource extends Resource
                     }
                 })
                 ->placeholder('Enter YouTube video URL')
-                ->required()
-                ->columnSpanFull(),
+                ->required(),
 
             TextInput::make('title')
                 ->placeholder('Video Title')

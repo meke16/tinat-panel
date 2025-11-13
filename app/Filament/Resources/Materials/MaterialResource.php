@@ -54,6 +54,39 @@ class MaterialResource extends Resource
                 ->label('Chapter')
                 ->options(fn($get) => Chapter::where('subject_id', $get('subject_id'))->pluck('name', 'id'))
                 ->required(),
+            FileUpload::make('url')
+                ->label('Upload File')
+                ->directory('materials')
+                ->visibility('public')
+                ->disk('public')
+                ->reactive()
+                ->afterStateUpdated(function ($state, $set) {
+                    if (!$state) return;
+
+                    // fresh upload
+                    if (is_object($state)) {
+                        $set('title', pathinfo($state->getClientOriginalName(), PATHINFO_FILENAME));
+                        $set('type', strtoupper($state->getClientOriginalExtension()));
+                        $set('size', round($state->getSize() / 1024 / 1024, 2) . ' MB');
+                    }
+                    // already stored file
+                    else {
+                        $set('title', pathinfo($state, PATHINFO_FILENAME));
+
+                        if (Storage::disk('public')->exists($state)) {
+                            $extension = pathinfo($state, PATHINFO_EXTENSION);
+                            $set('type', strtoupper($extension));
+
+                            $size = Storage::disk('public')->size($state);
+                            $set('size', round($size / 1024 / 1024, 2) . ' MB');
+                        } else {
+                            // fallback if file missing
+                            $set('type', '');
+                            $set('size', '');
+                        }
+                    }
+                })
+                ->columnSpanFull(),
 
             TextInput::make('title')
                 ->label('Title')
@@ -63,62 +96,14 @@ class MaterialResource extends Resource
                 ->label('Author'),
 
             TextInput::make('type')
+                ->required()
                 ->label('Type'),
 
             TextInput::make('size')
                 ->label('Size (bytes)'),
 
 
-            FileUpload::make('url')
-                ->label('Upload File')
-                ->directory('uploads/materials')
-                ->visibility('public')
-                ->disk('public')
-                ->reactive()
-                ->afterStateUpdated(function ($state, $set) {
-                    if (!$state) return;
 
-                    // $state is either string (already stored) or UploadedFile object (fresh upload)
-                    if (is_object($state)) {
-                        // fresh upload
-                        $set('title', pathinfo($state->getClientOriginalName(), PATHINFO_FILENAME));
-                        $set('type', $state->getClientOriginalExtension());
-                        $set('size', round($state->getSize() / 1024 / 1024, 2) . ' MB'); // in MB
-                    } else {
-                        // already stored file (string path)
-                        $path = $state;
-                        $set('title', pathinfo($path, PATHINFO_FILENAME));
-                        if (Storage::disk('public')->exists($path)) {
-                            $set('type', pathinfo($path, PATHINFO_EXTENSION));
-                            $size = Storage::disk('public')->size($path);
-                            $set('size', round($size / 1024 / 1024, 2) . ' MB');
-                        }
-                    }
-                })
-
-                ->directory('uploads/materials')
-                ->visibility('public')
-                ->disk('public')
-                ->reactive()
-                ->afterStateUpdated(function ($state, $set) {
-                    if (!$state) return;
-
-                    $fullPath = storage_path('app/public/' . $state);
-                    $extension = pathinfo($fullPath, PATHINFO_EXTENSION);
-
-                    $set('type', $extension);
-
-                    if ($state) {
-                        // $state is the filename relative to the disk
-                        $path = $state;
-
-                        // Use Storage facade to get size from disk
-                        if (Storage::disk('public')->exists($path)) {
-                            $size = Storage::disk('public')->size($path);
-                            $set('size', round($size / 1024 / 1024, 2) . ' MB'); // MB
-                        }
-                    }
-                }),
 
             Textarea::make('description')
                 ->label('Description')

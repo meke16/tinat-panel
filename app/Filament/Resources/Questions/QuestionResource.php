@@ -123,14 +123,14 @@ class QuestionResource extends Resource
                 ->required()
                 ->columnSpanFull()
                 ->fileAttachmentsDisk('public')
-                ->fileAttachmentsDirectory('questions/images'),
+                ->fileAttachmentsDirectory('questions'),
 
             RichEditor::make('explanation')
                 ->label('Explanation')
                 ->required()
                 ->columnSpanFull()
                 ->fileAttachmentsDisk('public')
-                ->fileAttachmentsDirectory('questions/explanations'),
+                ->fileAttachmentsDirectory('questions'),
 
             // Options repeater with RichEditor
             Repeater::make('options')
@@ -147,7 +147,7 @@ class QuestionResource extends Resource
                         ->label('Option Text')
                         ->required()
                         ->fileAttachmentsDisk('public')
-                        ->fileAttachmentsDirectory('questions/options')
+                        ->fileAttachmentsDirectory('questions')
                         ->columnSpan(2),
                 ])
                 ->columns(1)

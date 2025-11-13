@@ -37,6 +37,13 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
+            ->widgets([
+                \App\Filament\Widgets\DashboardStats::class,
+                \App\Filament\Widgets\SubjectsPerGradeChart::class,
+                \App\Filament\Widgets\ContentDistributionChart::class,
+                \App\Filament\Widgets\MonthlyGrowthChart::class,
+                \App\Filament\Widgets\RecentContentWidget::class,
+            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
