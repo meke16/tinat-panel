@@ -2,7 +2,7 @@ FROM php:8.3-fpm
 
 WORKDIR /var/www/html
 
-# Install dependencies and PHP extensions
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     nginx \
     libzip-dev \
@@ -11,30 +11,39 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     libicu-dev \
-    && docker-php-ext-install pdo_mysql zip intl
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    && docker-php-ext-install pdo_mysql zip intl gd mbstring exif pcntl bcmath
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy composer files and install dependencies
+# Configure PHP-FPM to use port 9000 (more reliable in Docker)
+RUN echo 'listen = 9000' >> /usr/local/etc/php-fpm.d/zz-docker.conf
+
+# Copy composer files
 COPY composer.json composer.lock ./
+
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Copy the rest of the project
+# Copy application code
 COPY . .
 
-# Run post-autoload Laravel commands now that artisan exists
+# Generate Laravel optimized files
 RUN php artisan package:discover --ansi
 
-# Copy nginx config
-COPY config/nginx/nginx-site.conf /etc/nginx/sites-available/default
+# Copy nginx configuration
+COPY docker/nginx.conf /etc/nginx/sites-available/default
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 storage bootstrap/cache
+# Create Laravel storage directories and set permissions
+RUN mkdir -p storage/framework/{sessions,views,cache} \
+    && chmod -R 775 storage bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html
 
 # Copy start script
-COPY start.sh /start.sh
+COPY docker/start.sh /start.sh
 RUN chmod +x /start.sh
 
 EXPOSE 80
