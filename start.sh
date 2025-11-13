@@ -1,11 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
-# Run Laravel migrations and cache (optional on first deploy)
-php artisan migrate --force
+# Run Laravel optimizations
 php artisan config:cache
 php artisan route:cache
-
-#!/bin/sh
 
 # Start PHP-FPM in background
 php-fpm -D
