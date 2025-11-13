@@ -94,7 +94,7 @@ class RecentContentWidget extends BaseWidget
                     ->since()
                     ->sortable(),
             ])
-            ->paginated(false)
-            ->records(fn() => $this->getTableData()->toArray()); // ✅ convert to array
+            ->paginated(true)
+            ->records(fn() => $this->getTableData()->toArray());
     }
 }
