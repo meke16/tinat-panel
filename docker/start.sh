@@ -1,10 +1,13 @@
 #!/bin/sh
 
-# Create storage link
-php artisan storage:link
+# Clear any old caches first (important for Filament)
+php artisan optimize:clear
 
-# Create a Filament user (update email/password as needed)
-php artisan make:filament-user --email=admin@example.com --password=Adey@1997 --name=Admin
+# Publish Filament assets (to fix missing layout)
+php artisan filament:assets
+
+# Create storage symlink
+php artisan storage:link
 
 # Cache optimizations
 php artisan config:cache
