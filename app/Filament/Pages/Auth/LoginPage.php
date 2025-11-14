@@ -23,7 +23,7 @@ class LoginPage extends BaseLogin
                 if ($user) {
                     Notification::make()
                         ->title('Welcome back, ' . $user->name . '!')
-                        ->body('You have successfully logged in.' . $user->email)
+                        ->body('You have successfully logged in.')
                         ->success()
                         ->duration(5000)
                         ->send();

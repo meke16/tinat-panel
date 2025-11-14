@@ -17,8 +17,7 @@ class RegisterPage extends BaseRegister
     public function register(): ?RegistrationResponse
     {
         // Check a global user limit before attempting registration.
-        // If the limit is reached, show a danger notification and redirect to `/`.
-        $maxUsers = 3; // make configurable if you like
+        $maxUsers = 3; 
         if (User::count() >= $maxUsers) {
             Notification::make()
                 ->title('Registration closed')
@@ -56,7 +55,7 @@ class RegisterPage extends BaseRegister
 
         Notification::make()
             ->title('Welcome, ' . $user->name . '!')
-            ->body('Your account has been successfully created: ' . $user->email)
+            ->body('Your account has been successfully created: ')
             ->success()
             ->send();
 
