@@ -63,10 +63,10 @@
                 </div>
 
                 <!-- Cards Section -->
-                @if(App\Models\User::count() <= 3)
+                @if(App\Models\User::count() < 3)
                 <div class="grid md:grid-cols-2 gap-8 mt-12">
                 @else
-                <div class="grid md:grid-cols-2 gap-2 mt-12">
+                <div class="grid md:grid-cols-1 gap-2 mt-12">
                 @endif
                     <!-- Admin Login Card -->
                     <div class="glass-morphism rounded-2xl shadow-xl p-8 hover-lift hover:bg-white/15">
@@ -89,7 +89,7 @@
                     </div>
 
                     <!-- Admin Register Card -->
-                    @if(App\Models\User::count() <= 3)
+                    @if(App\Models\User::count() < 3)
                     <div class="glass-morphism rounded-2xl shadow-xl p-8 hover-lift hover:bg-white/15">
                         <div class="flex items-center justify-center w-12 h-12 bg-green-500 rounded-lg mb-6">
                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
